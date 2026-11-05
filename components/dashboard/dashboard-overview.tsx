@@ -1,5 +1,5 @@
 "use client";
-
+import { useState } from "react";
 import {
   Activity,
   CheckCircle2,
@@ -22,8 +22,15 @@ import {
   getAnalyticsSummary,
   getDeliveries,
   getDeliveryActivity,
+  getDelivery,
+  getDeliveryAttempts,
 } from "@/lib/api";
-import type { Delivery, DeliveryActivityDay } from "@/lib/api";
+
+import type {
+  Delivery,
+  DeliveryActivityDay,
+  DeliveryAttempt,
+} from "@/lib/api";
 
 import { Badge } from "@/components/ui/badge";
 import {
@@ -34,6 +41,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 
 import {
   Bar,
@@ -46,6 +60,7 @@ import {
   YAxis,
 } from "recharts";
 import { format, parseISO } from "date-fns";
+
 
 interface Metric {
   label: string;
@@ -112,6 +127,21 @@ function StatusBadge({ status }: { status: string }) {
 
 export function DashboardOverview() {
 
+  const [selectedDeliveryId, setSelectedDeliveryId] =
+    useState<number | null>(null);
+
+  const selectedDeliveryQuery = useQuery({
+    queryKey: ["delivery", selectedDeliveryId],
+    queryFn: () => getDelivery(selectedDeliveryId!),
+    enabled: selectedDeliveryId !== null,
+  });
+
+  const deliveryAttemptsQuery = useQuery({
+    queryKey: ["delivery-attempts", selectedDeliveryId],
+    queryFn: () => getDeliveryAttempts(selectedDeliveryId!),
+    enabled: selectedDeliveryId !== null,
+  });
+
   const analyticsQuery = useQuery({
     queryKey: ["analytics-summary"],
     queryFn: getAnalyticsSummary,
@@ -174,7 +204,7 @@ export function DashboardOverview() {
       label: "Queued / processing",
       value: numberFormat.format(
         (analytics?.delivery_status_counts.queued ?? 0) +
-          (analytics?.delivery_status_counts.processing ?? 0),
+        (analytics?.delivery_status_counts.processing ?? 0),
       ),
       icon: RefreshCw,
       description: "Awaiting completion",
@@ -254,11 +284,10 @@ export function DashboardOverview() {
                       ? "/"
                       : `/${item.label.toLowerCase()}`
                   }
-                  className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
-                    item.active
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  }`}
+                  className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${item.active
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    }`}
                 >
                   <Icon className="size-4" />
                   {item.label}
@@ -272,9 +301,8 @@ export function DashboardOverview() {
           <div className="rounded-xl border bg-muted/40 p-4">
             <div className="mb-2 flex items-center gap-2">
               <span
-                className={`size-2 rounded-full ${
-                  isConnected ? "bg-emerald-500" : "bg-red-500"
-                }`}
+                className={`size-2 rounded-full ${isConnected ? "bg-emerald-500" : "bg-red-500"
+                  }`}
               />
               <span className="text-sm font-medium">
                 {analyticsQuery.isPending || deliveriesQuery.isPending
@@ -316,9 +344,8 @@ export function DashboardOverview() {
           <div className="flex items-center gap-3">
             <Badge variant="outline" className="hidden gap-1.5 sm:flex">
               <span
-                className={`size-1.5 rounded-full ${
-                  isConnected ? "bg-emerald-500" : "bg-red-500"
-                }`}
+                className={`size-1.5 rounded-full ${isConnected ? "bg-emerald-500" : "bg-red-500"
+                  }`}
               />
               {analyticsQuery.isPending || deliveriesQuery.isPending
                 ? "Connecting"
@@ -408,112 +435,112 @@ export function DashboardOverview() {
           </div>
 
           <div className="grid gap-6 xl:grid-cols-3">
-        <Card className="xl:col-span-2">
-          <CardHeader>
-            <CardTitle>Delivery activity</CardTitle>
-            <CardDescription>
-              Daily delivery counts by current status over the last seven days
-            </CardDescription>
-          </CardHeader>
+            <Card className="xl:col-span-2">
+              <CardHeader>
+                <CardTitle>Delivery activity</CardTitle>
+                <CardDescription>
+                  Daily delivery counts by current status over the last seven days
+                </CardDescription>
+              </CardHeader>
 
-          <CardContent>
-            {activityQuery.isPending ? (
-              <div className="flex h-[260px] items-center justify-center text-sm text-muted-foreground">
-                Loading delivery activity...
-              </div>
-            ) : activityQuery.isError ? (
-              <div className="flex h-[260px] items-center justify-center rounded-lg border border-red-200 bg-red-50 px-4 text-center text-sm text-red-700">
-                Unable to load delivery activity. Please try again.
-              </div>
-            ) : !hasActivity ? (
-              <div className="flex h-[260px] flex-col items-center justify-center text-center">
-                <Activity className="mb-3 size-8 text-muted-foreground" />
-                <p className="text-sm font-medium">No delivery activity yet</p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Delivery counts will appear here when records are created.
-                </p>
-              </div>
-            ) : (
-              <div className="h-[260px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={chartData}
-                    margin={{ top: 8, right: 8, left: -16, bottom: 0 }}
-                  >
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      vertical={false}
-                      className="stroke-border"
-                    />
+              <CardContent>
+                {activityQuery.isPending ? (
+                  <div className="flex h-[260px] items-center justify-center text-sm text-muted-foreground">
+                    Loading delivery activity...
+                  </div>
+                ) : activityQuery.isError ? (
+                  <div className="flex h-[260px] items-center justify-center rounded-lg border border-red-200 bg-red-50 px-4 text-center text-sm text-red-700">
+                    Unable to load delivery activity. Please try again.
+                  </div>
+                ) : !hasActivity ? (
+                  <div className="flex h-[260px] flex-col items-center justify-center text-center">
+                    <Activity className="mb-3 size-8 text-muted-foreground" />
+                    <p className="text-sm font-medium">No delivery activity yet</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Delivery counts will appear here when records are created.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="h-[260px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={chartData}
+                        margin={{ top: 8, right: 8, left: -16, bottom: 0 }}
+                      >
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          vertical={false}
+                          className="stroke-border"
+                        />
 
-                    <XAxis
-                      dataKey="label"
-                      tickLine={false}
-                      axisLine={false}
-                      tick={{ fontSize: 12 }}
-                      minTickGap={12}
-                    />
+                        <XAxis
+                          dataKey="label"
+                          tickLine={false}
+                          axisLine={false}
+                          tick={{ fontSize: 12 }}
+                          minTickGap={12}
+                        />
 
-                    <YAxis
-                      allowDecimals={false}
-                      tickLine={false}
-                      axisLine={false}
-                      tick={{ fontSize: 12 }}
-                    />
+                        <YAxis
+                          allowDecimals={false}
+                          tickLine={false}
+                          axisLine={false}
+                          tick={{ fontSize: 12 }}
+                        />
 
-                    <Tooltip
-                      labelFormatter={(_, payload) => {
-                        const date = payload?.[0]?.payload?.date;
-                        return typeof date === "string"
-                          ? format(parseISO(date), "MMMM d, yyyy")
-                          : "";
-                      }}
-                      cursor={{ fill: "currentColor", opacity: 0.05 }}
-                      contentStyle={{
-                        borderRadius: 8,
-                        border: "1px solid var(--border)",
-                        backgroundColor: "var(--background)",
-                        fontSize: 12,
-                      }}
-                    />
+                        <Tooltip
+                          labelFormatter={(_, payload) => {
+                            const date = payload?.[0]?.payload?.date;
+                            return typeof date === "string"
+                              ? format(parseISO(date), "MMMM d, yyyy")
+                              : "";
+                          }}
+                          cursor={{ fill: "currentColor", opacity: 0.05 }}
+                          contentStyle={{
+                            borderRadius: 8,
+                            border: "1px solid var(--border)",
+                            backgroundColor: "var(--background)",
+                            fontSize: 12,
+                          }}
+                        />
 
-                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                        <Legend wrapperStyle={{ fontSize: 12 }} />
 
-                    <Bar
-                      dataKey="delivered"
-                      name="Delivered"
-                      stackId="status"
-                      fill="#10b981"
-                      radius={[0, 0, 0, 0]}
-                    />
+                        <Bar
+                          dataKey="delivered"
+                          name="Delivered"
+                          stackId="status"
+                          fill="#10b981"
+                          radius={[0, 0, 0, 0]}
+                        />
 
-                    <Bar
-                      dataKey="failed"
-                      name="Failed"
-                      stackId="status"
-                      fill="#ef4444"
-                    />
+                        <Bar
+                          dataKey="failed"
+                          name="Failed"
+                          stackId="status"
+                          fill="#ef4444"
+                        />
 
-                    <Bar
-                      dataKey="queued"
-                      name="Queued"
-                      stackId="status"
-                      fill="#3b82f6"
-                    />
+                        <Bar
+                          dataKey="queued"
+                          name="Queued"
+                          stackId="status"
+                          fill="#3b82f6"
+                        />
 
-                    <Bar
-                      dataKey="processing"
-                      name="Processing"
-                      stackId="status"
-                      fill="#f59e0b"
-                      radius={[4, 4, 0, 0]}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                        <Bar
+                          dataKey="processing"
+                          name="Processing"
+                          stackId="status"
+                          fill="#f59e0b"
+                          radius={[4, 4, 0, 0]}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
             <Card>
               <CardHeader>
@@ -642,7 +669,17 @@ export function DashboardOverview() {
                       deliveries.map((delivery) => (
                         <tr
                           key={delivery.id}
-                          className="border-b last:border-0 hover:bg-muted/30"
+                          className="cursor-pointer border-b last:border-0 hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                          tabIndex={0}
+                          role="button"
+                          aria-label={`View delivery ${delivery.id} details`}
+                          onClick={() => setSelectedDeliveryId(delivery.id)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              setSelectedDeliveryId(delivery.id);
+                            }
+                          }}
                         >
                           <td className="px-6 py-4 font-mono text-xs">
                             {delivery.id}
@@ -673,14 +710,220 @@ export function DashboardOverview() {
               </div>
             </CardContent>
           </Card>
+          <Sheet
+            open={selectedDeliveryId !== null}
+            onOpenChange={(open) => {
+              if (!open) setSelectedDeliveryId(null);
+            }}
+          >
+            <SheetContent className="w-full gap-0 overflow-y-auto p-0 sm:max-w-xl">
+              <SheetHeader className="border-b px-6 py-5">
+                <SheetTitle>
+                  Delivery {selectedDeliveryId ?? ""}
+                </SheetTitle>
+                <SheetDescription>
+                  Delivery metadata and webhook attempt history.
+                </SheetDescription>
+              </SheetHeader>
 
+              {selectedDeliveryQuery.isPending ? (
+                <p className="py-6 text-sm text-muted-foreground">
+                  Loading delivery details...
+                </p>
+              ) : selectedDeliveryQuery.isError ? (
+                <p className="py-6 text-sm text-destructive">
+                  Could not load delivery details. Please try again.
+                </p>
+              ) : selectedDeliveryQuery.data ? (
+                <div className="space-y-8 px-6 py-6">
+                  {(() => {
+                    const delivery = selectedDeliveryQuery.data;
+
+                    return (
+                      <>
+                        <section className="space-y-4">
+                          <h3 className="text-sm font-semibold tracking-tight">Delivery overview</h3>
+
+                          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <div>
+                              <p className="text-muted-foreground">Status</p>
+                              <div className="mt-1">
+                                <StatusBadge status={delivery.status} />
+                              </div>
+                            </div>
+
+                            <div>
+                              <p className="text-muted-foreground">HTTP status</p>
+                              <p className="mt-1 font-medium">
+                                {delivery.last_http_status ?? "—"}
+                              </p>
+                            </div>
+
+                            <div className="min-w-0 space-y-1">
+                              <p className="text-xs font-medium text-muted-foreground">
+                                Event type
+                              </p>
+                              <p className="break-words text-sm font-medium">
+                                {delivery.event_type}
+                              </p>
+                            </div>
+
+                            <div>
+                              <p className="text-muted-foreground">Endpoint</p>
+                              <p className="mt-1 break-words font-medium">
+                                {delivery.endpoint_name}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {delivery.endpoint_slug}
+                              </p>
+                            </div>
+
+                            <div>
+                              <p className="text-muted-foreground">Attempts</p>
+                              <p className="mt-1 font-medium">
+                                {delivery.attempt_count} / {delivery.max_attempts}
+                              </p>
+                            </div>
+
+                            <div>
+                              <p className="text-muted-foreground">Created</p>
+                              <p className="mt-1">
+                                {formatTimestamp(delivery.created_at)}
+                              </p>
+                            </div>
+
+                            <div>
+                              <p className="text-muted-foreground">Last attempt</p>
+                              <p className="mt-1">
+                                {formatTimestamp(delivery.last_attempt_at)}
+                              </p>
+                            </div>
+
+                            <div>
+                              <p className="text-muted-foreground">Delivered</p>
+                              <p className="mt-1">
+                                {formatTimestamp(delivery.delivered_at)}
+                              </p>
+                            </div>
+                          </div>
+
+                          {delivery.last_error && (
+                            <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+                              <p className="font-semibold">Latest error</p>
+                              <p className="mt-1 whitespace-pre-wrap break-words">
+                                {delivery.last_error}
+                              </p>
+                            </div>
+                          )}
+                        </section>
+
+                        <Separator />
+
+                        <section className="space-y-4">
+                          <div>
+                            <h3 className="text-sm font-semibold">Attempt history</h3>
+                            <p className="text-xs text-muted-foreground">
+                              Individual delivery attempts and their responses.
+                            </p>
+                          </div>
+
+                          {deliveryAttemptsQuery.isPending ? (
+                            <p className="text-sm text-muted-foreground">
+                              Loading attempt history...
+                            </p>
+                          ) : deliveryAttemptsQuery.isError ? (
+                            <p className="text-sm text-destructive">
+                              Could not load attempt history.
+                            </p>
+                          ) : !deliveryAttemptsQuery.data?.length ? (
+                            <p className="rounded-md border p-4 text-sm text-muted-foreground">
+                              No attempts recorded for this delivery yet.
+                            </p>
+                          ) : (
+                            <div className="space-y-4">
+                              {deliveryAttemptsQuery.data.map((attempt: DeliveryAttempt) => (
+                                <article
+                                  key={attempt.id}
+                                  className="space-y-4 rounded-xl border bg-card p-4 sm:p-5"
+                                >
+                                  <div className="flex flex-wrap items-start justify-between gap-2">
+                                    <div>
+                                      <p className="text-sm font-semibold">
+                                        Attempt {attempt.attempt_number}
+                                      </p>
+                                      <p className="text-xs text-muted-foreground">
+                                        {formatTimestamp(attempt.attempted_at)}
+                                      </p>
+                                    </div>
+
+                                    <Badge
+                                      variant="outline"
+                                      className={
+                                        attempt.result.toLowerCase() === "success"
+                                          ? statusStyles.delivered
+                                          : statusStyles.failed
+                                      }
+                                    >
+                                      {formatStatus(attempt.result)}
+                                    </Badge>
+                                  </div>
+
+                                  <div className="grid grid-cols-2 gap-4 rounded-lg bg-muted/40 p-3 text-sm">
+                                    <div>
+                                      <p className="text-muted-foreground">HTTP status</p>
+                                      <p className="font-medium">
+                                        {attempt.http_status_code ?? "—"}
+                                      </p>
+                                    </div>
+                                    <div>
+                                      <p className="text-muted-foreground">Response time</p>
+                                      <p className="font-medium">
+                                        {attempt.response_time_ms != null
+                                          ? `${attempt.response_time_ms} ms`
+                                          : "—"}
+                                      </p>
+                                    </div>
+                                  </div>
+
+                                  {attempt.error_message && (
+                                    <div>
+                                      <p className="mb-1 text-xs font-semibold text-destructive">
+                                        Error
+                                      </p>
+                                      <pre className="overflow-x-auto whitespace-pre-wrap break-words rounded-md bg-muted p-3 text-xs">
+                                        {attempt.error_message}
+                                      </pre>
+                                    </div>
+                                  )}
+
+                                  {attempt.response_body && (
+                                    <details className="text-sm">
+                                      <summary className="cursor-pointer font-medium">
+                                        Response body
+                                      </summary>
+                                      <pre className="mt-3 max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-lg border bg-muted/40 p-4 font-mono text-xs leading-relaxed">
+                                        {attempt.response_body}
+                                      </pre>
+                                    </details>
+                                  )}
+                                </article>
+                              ))}
+                            </div>
+                          )}
+                        </section>
+                      </>
+                    );
+                  })()}
+                </div>
+              ) : null}
+            </SheetContent>
+          </Sheet>
           <footer className="flex flex-col gap-2 border-t pt-5 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
             <span>HookRelay Dashboard</span>
             <span className="flex items-center gap-2">
               <span
-                className={`size-2 rounded-full ${
-                  isConnected ? "bg-emerald-500" : "bg-red-500"
-                }`}
+                className={`size-2 rounded-full ${isConnected ? "bg-emerald-500" : "bg-red-500"
+                  }`}
               />
               {analyticsQuery.isPending || deliveriesQuery.isPending
                 ? "Connecting to backend"
