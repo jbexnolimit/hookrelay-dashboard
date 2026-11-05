@@ -21,8 +21,10 @@ import { formatDistanceToNow } from "date-fns";
 import {
   getAnalyticsSummary,
   getDeliveries,
+  getDeliveryActivity,
 } from "@/lib/api";
-import type { Delivery } from "@/lib/api";
+import type { Delivery, DeliveryActivityDay } from "@/lib/api";
+
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -32,6 +34,18 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Legend,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+import { format, parseISO } from "date-fns";
 
 interface Metric {
   label: string;
@@ -97,6 +111,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export function DashboardOverview() {
+
   const analyticsQuery = useQuery({
     queryKey: ["analytics-summary"],
     queryFn: getAnalyticsSummary,
@@ -106,6 +121,27 @@ export function DashboardOverview() {
     queryKey: ["deliveries"],
     queryFn: getDeliveries,
   });
+
+  const activityQuery = useQuery({
+    queryKey: ["delivery-activity"],
+    queryFn: getDeliveryActivity,
+  });
+
+  const activityDays: DeliveryActivityDay[] =
+    activityQuery.data?.days ?? [];
+
+  const chartData = activityDays.map((day) => ({
+    ...day,
+    label: format(parseISO(day.date), "MMM d"),
+  }));
+
+  const hasActivity = activityDays.some(
+    (day) =>
+      day.queued > 0 ||
+      day.processing > 0 ||
+      day.delivered > 0 ||
+      day.failed > 0,
+  );
 
   const analytics = analyticsQuery.data;
   const deliveries: Delivery[] = deliveriesQuery.data ?? [];
@@ -372,28 +408,112 @@ export function DashboardOverview() {
           </div>
 
           <div className="grid gap-6 xl:grid-cols-3">
-            <Card className="xl:col-span-2">
-              <CardHeader>
-                <CardTitle>Delivery activity</CardTitle>
-                <CardDescription>
-                  Time-series activity will be available when the backend
-                  provides historical analytics.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex h-[260px] flex-col items-center justify-center rounded-lg border border-dashed text-center">
-                  <Activity className="mb-3 size-8 text-muted-foreground" />
-                  <p className="text-sm font-medium">
-                    No activity timeline available
-                  </p>
-                  <p className="mt-1 max-w-sm px-4 text-xs text-muted-foreground">
-                    Current totals and delivery statuses are available in the
-                    dashboard. Historical chart data is not yet provided by
-                    the API.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+        <Card className="xl:col-span-2">
+          <CardHeader>
+            <CardTitle>Delivery activity</CardTitle>
+            <CardDescription>
+              Daily delivery counts by current status over the last seven days
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent>
+            {activityQuery.isPending ? (
+              <div className="flex h-[260px] items-center justify-center text-sm text-muted-foreground">
+                Loading delivery activity...
+              </div>
+            ) : activityQuery.isError ? (
+              <div className="flex h-[260px] items-center justify-center rounded-lg border border-red-200 bg-red-50 px-4 text-center text-sm text-red-700">
+                Unable to load delivery activity. Please try again.
+              </div>
+            ) : !hasActivity ? (
+              <div className="flex h-[260px] flex-col items-center justify-center text-center">
+                <Activity className="mb-3 size-8 text-muted-foreground" />
+                <p className="text-sm font-medium">No delivery activity yet</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Delivery counts will appear here when records are created.
+                </p>
+              </div>
+            ) : (
+              <div className="h-[260px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={chartData}
+                    margin={{ top: 8, right: 8, left: -16, bottom: 0 }}
+                  >
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      vertical={false}
+                      className="stroke-border"
+                    />
+
+                    <XAxis
+                      dataKey="label"
+                      tickLine={false}
+                      axisLine={false}
+                      tick={{ fontSize: 12 }}
+                      minTickGap={12}
+                    />
+
+                    <YAxis
+                      allowDecimals={false}
+                      tickLine={false}
+                      axisLine={false}
+                      tick={{ fontSize: 12 }}
+                    />
+
+                    <Tooltip
+                      labelFormatter={(_, payload) => {
+                        const date = payload?.[0]?.payload?.date;
+                        return typeof date === "string"
+                          ? format(parseISO(date), "MMMM d, yyyy")
+                          : "";
+                      }}
+                      cursor={{ fill: "currentColor", opacity: 0.05 }}
+                      contentStyle={{
+                        borderRadius: 8,
+                        border: "1px solid var(--border)",
+                        backgroundColor: "var(--background)",
+                        fontSize: 12,
+                      }}
+                    />
+
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
+
+                    <Bar
+                      dataKey="delivered"
+                      name="Delivered"
+                      stackId="status"
+                      fill="#10b981"
+                      radius={[0, 0, 0, 0]}
+                    />
+
+                    <Bar
+                      dataKey="failed"
+                      name="Failed"
+                      stackId="status"
+                      fill="#ef4444"
+                    />
+
+                    <Bar
+                      dataKey="queued"
+                      name="Queued"
+                      stackId="status"
+                      fill="#3b82f6"
+                    />
+
+                    <Bar
+                      dataKey="processing"
+                      name="Processing"
+                      stackId="status"
+                      fill="#f59e0b"
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
             <Card>
               <CardHeader>
