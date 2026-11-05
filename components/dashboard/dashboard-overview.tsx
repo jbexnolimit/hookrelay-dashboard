@@ -477,7 +477,7 @@ export function DashboardOverview() {
 
             <CardContent className="px-0">
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[700px] text-left text-sm">
+                <table className="w-full min-w-[850px] text-left text-sm">
                   <thead>
                     <tr className="border-y bg-muted/30 text-xs text-muted-foreground">
                       <th className="px-6 py-3 font-medium">Delivery ID</th>
@@ -485,6 +485,7 @@ export function DashboardOverview() {
                       <th className="px-6 py-3 font-medium">Endpoint</th>
                       <th className="px-6 py-3 font-medium">Status</th>
                       <th className="px-6 py-3 font-medium">HTTP</th>
+                      <th className="px-6 py-3 font-medium">Attempts</th>
                       <th className="px-6 py-3 font-medium">Created</th>
                     </tr>
                   </thead>
@@ -493,7 +494,7 @@ export function DashboardOverview() {
                     {deliveriesQuery.isPending ? (
                       <tr>
                         <td
-                          colSpan={6}
+                          colSpan={7}
                           className="px-6 py-10 text-center text-muted-foreground"
                         >
                           Loading deliveries...
@@ -502,7 +503,7 @@ export function DashboardOverview() {
                     ) : deliveriesError ? (
                       <tr>
                         <td
-                          colSpan={6}
+                          colSpan={7}
                           className="px-6 py-10 text-center text-muted-foreground"
                         >
                           Could not load delivery records.
@@ -511,7 +512,7 @@ export function DashboardOverview() {
                     ) : deliveries.length === 0 ? (
                       <tr>
                         <td
-                          colSpan={6}
+                          colSpan={7}
                           className="px-6 py-10 text-center text-muted-foreground"
                         >
                           No deliveries recorded yet.
@@ -537,6 +538,9 @@ export function DashboardOverview() {
                           </td>
                           <td className="px-6 py-4 font-mono text-xs text-muted-foreground">
                             {delivery.last_http_status ?? "—"}
+                          </td>
+                          <td className="px-6 py-4 font-mono text-xs text-muted-foreground">
+                            {delivery.attempt_count} / {delivery.max_attempts}
                           </td>
                           <td className="px-6 py-4 text-muted-foreground">
                             {formatTimestamp(delivery.created_at)}
