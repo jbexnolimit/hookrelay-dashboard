@@ -15,7 +15,7 @@ import {
   Zap,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 
 import {
@@ -24,6 +24,7 @@ import {
   getDeliveryActivity,
   getDelivery,
   getDeliveryAttempts,
+  retryDelivery,
 } from "@/lib/api";
 
 import type {
@@ -126,9 +127,27 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export function DashboardOverview() {
+  const queryClient = useQueryClient();
 
   const [selectedDeliveryId, setSelectedDeliveryId] =
     useState<number | null>(null);
+
+  const retryMutation = useMutation({
+    mutationFn: retryDelivery,
+    onSuccess: async (result, deliveryId) => {
+      queryClient.setQueryData(["delivery", deliveryId], result.delivery);
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["delivery", deliveryId] }),
+        queryClient.invalidateQueries({
+          queryKey: ["delivery-attempts", deliveryId],
+        }),
+        queryClient.invalidateQueries({ queryKey: ["deliveries"] }),
+        queryClient.invalidateQueries({ queryKey: ["analytics-summary"] }),
+        queryClient.invalidateQueries({ queryKey: ["delivery-activity"] }),
+      ]);
+    },
+  });
 
   const selectedDeliveryQuery = useQuery({
     queryKey: ["delivery", selectedDeliveryId],
@@ -806,6 +825,49 @@ export function DashboardOverview() {
                               </p>
                             </div>
                           </div>
+
+                          {delivery.status.toLowerCase() === "failed" && (
+                            <div className="space-y-3 rounded-lg border p-4">
+                              <div>
+                                <h4 className="text-sm font-semibold">
+                                  Manual retry
+                                </h4>
+                                <p className="mt-1 text-xs text-muted-foreground">
+                                  Queue this failed delivery for another attempt.
+                                </p>
+                              </div>
+
+                              <button
+                                type="button"
+                                disabled={retryMutation.isPending}
+                                onClick={() => retryMutation.mutate(delivery.id)}
+                                className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                <RefreshCw
+                                  className={`size-4 ${
+                                    retryMutation.isPending ? "animate-spin" : ""
+                                  }`}
+                                />
+                                {retryMutation.isPending
+                                  ? "Queuing retry..."
+                                  : "Retry delivery"}
+                              </button>
+
+                              {retryMutation.isSuccess && (
+                                <p className="text-sm text-emerald-700">
+                                  {retryMutation.data.message}
+                                </p>
+                              )}
+
+                              {retryMutation.isError && (
+                                <p className="text-sm text-destructive">
+                                  {retryMutation.error instanceof Error
+                                    ? retryMutation.error.message
+                                    : "Could not queue the retry. Please try again."}
+                                </p>
+                              )}
+                            </div>
+                          )}
 
                           {delivery.last_error && (
                             <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">
