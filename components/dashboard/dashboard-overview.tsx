@@ -3,16 +3,11 @@ import { useState } from "react";
 import {
   Activity,
   CheckCircle2,
-  ChevronDown,
   CircleAlert,
   Clock3,
-  Command,
-  LayoutDashboard,
-  Radio,
   RefreshCw,
   Settings2,
   Webhook,
-  Zap,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -33,7 +28,10 @@ import type {
   DeliveryAttempt,
 } from "@/lib/api";
 
+import { DashboardNavigation } from "@/components/dashboard/dashboard-navigation";
+import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Card,
   CardContent,
@@ -69,20 +67,6 @@ interface Metric {
   icon: LucideIcon;
   description: string;
 }
-
-interface NavigationItem {
-  label: string;
-  icon: LucideIcon;
-  active: boolean;
-}
-
-const navigation: NavigationItem[] = [
-  { label: "Overview", icon: LayoutDashboard, active: true },
-  { label: "Deliveries", icon: Activity, active: false },
-  { label: "Events", icon: Radio, active: false },
-  { label: "Endpoints", icon: Webhook, active: false },
-  { label: "Analytics", icon: Zap, active: false },
-];
 
 const statusStyles: Record<string, string> = {
   delivered: "border-emerald-200 bg-emerald-50 text-emerald-700",
@@ -286,35 +270,7 @@ export function DashboardOverview() {
 
         <Separator />
 
-        <div className="px-4 py-5">
-          <p className="mb-3 px-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            Workspace
-          </p>
-
-          <nav className="space-y-1">
-            {navigation.map((item) => {
-              const Icon = item.icon;
-
-              return (
-                <a
-                  key={item.label}
-                  href={
-                    item.label === "Overview"
-                      ? "/"
-                      : `/${item.label.toLowerCase()}`
-                  }
-                  className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${item.active
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                    }`}
-                >
-                  <Icon className="size-4" />
-                  {item.label}
-                </a>
-              );
-            })}
-          </nav>
-        </div>
+        <DashboardNavigation />
 
         <div className="mt-auto p-4">
           <div className="rounded-xl border bg-muted/40 p-4">
@@ -373,21 +329,7 @@ export function DashboardOverview() {
                   : "API error"}
             </Badge>
 
-            <Separator
-              orientation="vertical"
-              className="hidden h-6 sm:block"
-            />
-
-            <button
-              type="button"
-              className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm hover:bg-muted"
-            >
-              <div className="flex size-6 items-center justify-center rounded-md bg-muted">
-                <Command className="size-3.5" />
-              </div>
-              <span className="hidden sm:inline">Developer</span>
-              <ChevronDown className="size-3.5 text-muted-foreground" />
-            </button>
+            <ThemeToggle />
           </div>
         </header>
 
@@ -438,11 +380,13 @@ export function DashboardOverview() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-semibold tracking-tight">
-                      {analyticsQuery.isPending
-                        ? "—"
-                        : analyticsError
-                          ? "—"
-                          : metric.value}
+                      {analyticsQuery.isPending ? (
+                        <Skeleton className="h-7 w-20" />
+                      ) : analyticsError ? (
+                        "—"
+                      ) : (
+                        metric.value
+                      )}
                     </div>
                     <p className="mt-1 text-xs text-muted-foreground">
                       {metric.description}
@@ -464,8 +408,20 @@ export function DashboardOverview() {
 
               <CardContent>
                 {activityQuery.isPending ? (
-                  <div className="flex h-[260px] items-center justify-center text-sm text-muted-foreground">
-                    Loading delivery activity...
+                  <div
+                    className="flex h-[260px] items-end gap-3 px-4 pb-4"
+                    role="status"
+                    aria-label="Loading delivery activity"
+                  >
+                    {Array.from({ length: 7 }, (_, index) => (
+                      <Skeleton
+                        key={index}
+                        className="flex-1"
+                        style={{
+                          height: `${30 + ((index * 19) % 55)}%`,
+                        }}
+                      />
+                    ))}
                   </div>
                 ) : activityQuery.isError ? (
                   <div className="flex h-[260px] items-center justify-center rounded-lg border border-red-200 bg-red-50 px-4 text-center text-sm text-red-700">
@@ -658,14 +614,19 @@ export function DashboardOverview() {
 
                   <tbody>
                     {deliveriesQuery.isPending ? (
-                      <tr>
-                        <td
-                          colSpan={7}
-                          className="px-6 py-10 text-center text-muted-foreground"
-                        >
-                          Loading deliveries...
-                        </td>
-                      </tr>
+                      Array.from({ length: 5 }, (_, row) => (
+                        <tr key={row} className="border-b last:border-0">
+                          {Array.from({ length: 7 }, (_, column) => (
+                            <td key={column} className="px-6 py-4">
+                              <Skeleton
+                                className={`h-4 ${
+                                  column === 0 ? "w-24" : "w-20"
+                                }`}
+                              />
+                            </td>
+                          ))}
+                        </tr>
+                      ))
                     ) : deliveriesError ? (
                       <tr>
                         <td
@@ -746,9 +707,24 @@ export function DashboardOverview() {
               </SheetHeader>
 
               {selectedDeliveryQuery.isPending ? (
-                <p className="py-6 text-sm text-muted-foreground">
-                  Loading delivery details...
-                </p>
+                <div
+                  className="space-y-5 px-6 py-6"
+                  role="status"
+                  aria-label="Loading delivery details"
+                >
+                  <Skeleton className="h-5 w-40" />
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    {Array.from({ length: 4 }, (_, index) => (
+                      <div key={index} className="space-y-2">
+                        <Skeleton className="h-3 w-20" />
+                        <Skeleton className="h-5 w-32" />
+                      </div>
+                    ))}
+                  </div>
+                  <Skeleton className="h-24 w-full" />
+                  <Skeleton className="h-5 w-36" />
+                  <Skeleton className="h-16 w-full" />
+                </div>
               ) : selectedDeliveryQuery.isError ? (
                 <p className="py-6 text-sm text-destructive">
                   Could not load delivery details. Please try again.
@@ -890,9 +866,22 @@ export function DashboardOverview() {
                           </div>
 
                           {deliveryAttemptsQuery.isPending ? (
-                            <p className="text-sm text-muted-foreground">
-                              Loading attempt history...
-                            </p>
+                            <div
+                              className="space-y-3"
+                              role="status"
+                              aria-label="Loading attempt history"
+                            >
+                              {Array.from({ length: 2 }, (_, index) => (
+                                <div
+                                  key={index}
+                                  className="space-y-3 rounded-xl border p-4"
+                                >
+                                  <Skeleton className="h-4 w-36" />
+                                  <Skeleton className="h-4 w-full" />
+                                  <Skeleton className="h-12 w-full" />
+                                </div>
+                              ))}
+                            </div>
                           ) : deliveryAttemptsQuery.isError ? (
                             <p className="text-sm text-destructive">
                               Could not load attempt history.

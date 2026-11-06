@@ -1,12 +1,12 @@
 "use client";
 
+import { DashboardNavigation } from "@/components/dashboard/dashboard-navigation";
+import { ThemeToggle } from "@/components/shared/theme-toggle";
+
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import {
-  Activity,
   ChevronLeft,
   ChevronRight,
-  LayoutDashboard,
   RefreshCw,
   Search,
   Webhook,
@@ -22,6 +22,7 @@ import {
 import type { DeliveryAttempt } from "@/lib/api";
 
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Card,
   CardContent,
@@ -188,23 +189,7 @@ export function DeliveriesPage() {
 
         <Separator />
 
-        <nav className="space-y-1 p-4">
-          <Link
-            href="/"
-            className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          >
-            <LayoutDashboard className="size-4" />
-            Overview
-          </Link>
-
-          <Link
-            href="/deliveries"
-            className="flex items-center gap-3 rounded-lg bg-primary px-3 py-2.5 text-sm text-primary-foreground"
-          >
-            <Activity className="size-4" />
-            Deliveries
-          </Link>
-        </nav>
+        <DashboardNavigation />
 
         <div className="mt-auto border-t px-6 py-4">
           <p className="text-xs text-muted-foreground">
@@ -221,9 +206,12 @@ export function DeliveriesPage() {
               Delivery management
             </p>
           </div>
-          <Badge variant="outline">
-            {deliveriesQuery.isError ? "Connection issue" : "Deliveries"}
-          </Badge>
+          <div className="flex items-center gap-3">
+            <Badge variant="outline">
+              {deliveriesQuery.isError ? "Connection issue" : "Deliveries"}
+            </Badge>
+            <ThemeToggle />
+          </div>
         </header>
 
         <div className="space-y-6 p-5 sm:p-8">
@@ -270,7 +258,11 @@ export function DeliveriesPage() {
                 <CardHeader className="pb-0">
                   <CardDescription>{metric.label}</CardDescription>
                   <CardTitle className="text-2xl">
-                    {deliveriesQuery.isPending ? "—" : metric.value}
+                    {deliveriesQuery.isPending ? (
+                      <Skeleton className="h-7 w-20" />
+                    ) : (
+                      metric.value
+                    )}
                   </CardTitle>
                 </CardHeader>
               </Card>
@@ -318,9 +310,23 @@ export function DeliveriesPage() {
               </div>
 
               {deliveriesQuery.isPending ? (
-                <p className="py-12 text-center text-sm text-muted-foreground">
-                  Loading deliveries...
-                </p>
+                <div
+                  className="space-y-4 py-4"
+                  role="status"
+                  aria-label="Loading deliveries"
+                >
+                  {Array.from({ length: 5 }, (_, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center gap-4 border-b pb-4 last:border-0"
+                    >
+                      <Skeleton className="h-4 w-20 shrink-0" />
+                      <Skeleton className="h-4 flex-1" />
+                      <Skeleton className="hidden h-4 w-28 sm:block" />
+                      <Skeleton className="h-6 w-20 rounded-full" />
+                    </div>
+                  ))}
+                </div>
               ) : deliveriesQuery.isError ? (
                 <div className="space-y-3 py-10 text-center">
                   <p className="text-sm text-destructive">
@@ -475,9 +481,24 @@ export function DeliveriesPage() {
           </SheetHeader>
 
           {selectedDeliveryQuery.isPending ? (
-            <p className="px-6 py-8 text-sm text-muted-foreground">
-              Loading delivery details...
-            </p>
+            <div
+              className="space-y-5 px-6 py-8"
+              role="status"
+              aria-label="Loading delivery details"
+            >
+              <Skeleton className="h-5 w-40" />
+              <div className="grid gap-4 sm:grid-cols-2">
+                {Array.from({ length: 4 }, (_, index) => (
+                  <div key={index} className="space-y-2">
+                    <Skeleton className="h-3 w-20" />
+                    <Skeleton className="h-5 w-32" />
+                  </div>
+                ))}
+              </div>
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-5 w-36" />
+              <Skeleton className="h-16 w-full" />
+            </div>
           ) : selectedDeliveryQuery.isError || !delivery ? (
             <div className="space-y-3 px-6 py-8">
               <p className="text-sm text-destructive">
@@ -617,9 +638,22 @@ export function DeliveriesPage() {
                 </div>
 
                 {deliveryAttemptsQuery.isPending ? (
-                  <p className="text-sm text-muted-foreground">
-                    Loading attempt history...
-                  </p>
+                  <div
+                    className="space-y-3"
+                    role="status"
+                    aria-label="Loading attempt history"
+                  >
+                    {Array.from({ length: 2 }, (_, index) => (
+                      <div
+                        key={index}
+                        className="space-y-3 rounded-xl border p-4"
+                      >
+                        <Skeleton className="h-4 w-36" />
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-12 w-full" />
+                      </div>
+                    ))}
+                  </div>
                 ) : deliveryAttemptsQuery.isError ? (
                   <div className="space-y-2">
                     <p className="text-sm text-destructive">

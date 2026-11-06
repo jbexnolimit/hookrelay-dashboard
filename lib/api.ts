@@ -14,3 +14,6 @@ export {
   getDeliveryAttempts,
   retryDelivery,
 } from "./api/delivery-details";
+
+export type { HookEvent } from "./api/types/event";
+export { getEvents, getEvent, getEventDeliveries } from "./api/events";
