@@ -1,6 +1,6 @@
 "use client";
 
-import { DashboardNavigation } from "@/components/dashboard/dashboard-navigation";
+import { DashboardNavigation, MobileDashboardDrawer } from "@/components/dashboard/dashboard-navigation";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 
 import { useMemo, useState } from "react";
@@ -58,11 +58,11 @@ function StatusBadge({ status }: { status: string }) {
   const normalized = status.toLowerCase();
 
   const styles: Record<string, string> = {
-    delivered: "border-emerald-200 bg-emerald-50 text-emerald-700",
-    failed: "border-red-200 bg-red-50 text-red-700",
-    processing: "border-amber-200 bg-amber-50 text-amber-700",
-    queued: "border-blue-200 bg-blue-50 text-blue-700",
-    pending: "border-blue-200 bg-blue-50 text-blue-700",
+    delivered: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300",
+    failed: "border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300",
+    processing: "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-300",
+    queued: "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/40 dark:text-blue-300",
+    pending: "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/40 dark:text-blue-300",
   };
 
   return (
@@ -70,7 +70,8 @@ function StatusBadge({ status }: { status: string }) {
       variant="outline"
       className={styles[normalized] ?? ""}
     >
-      {status}
+      <span className="mr-1.5 size-1.5 rounded-full bg-current" />
+      {status.charAt(0).toUpperCase() + status.slice(1)}
     </Badge>
   );
 }
@@ -83,11 +84,12 @@ function AttemptResultBadge({ result }: { result: string }) {
       variant="outline"
       className={
         success
-          ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-          : "border-red-200 bg-red-50 text-red-700"
+          ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300"
+          : "border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300"
       }
     >
-      {result}
+      <span className="mr-1.5 size-1.5 rounded-full bg-current" />
+      {result.charAt(0).toUpperCase() + result.slice(1)}
     </Badge>
   );
 }
@@ -176,7 +178,7 @@ export function DeliveriesPage() {
 
   return (
     <div className="min-h-screen bg-muted/30">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r bg-background lg:flex">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-border/60 bg-background/75 backdrop-blur-xl lg:flex">
         <div className="flex h-16 items-center gap-3 px-6">
           <div className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground">
             <Webhook className="size-5" />
@@ -199,7 +201,8 @@ export function DeliveriesPage() {
       </aside>
 
       <main className="min-h-screen lg:pl-64">
-        <header className="flex h-16 items-center justify-between border-b bg-background px-5 sm:px-8">
+        <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-border/60 bg-background/70 px-4 shadow-sm backdrop-blur-xl supports-[backdrop-filter]:bg-background/55 sm:px-6 lg:px-8">
+          <MobileDashboardDrawer />
           <div>
             <p className="text-sm font-medium">HookRelay</p>
             <p className="text-xs text-muted-foreground">
@@ -214,12 +217,12 @@ export function DeliveriesPage() {
           </div>
         </header>
 
-        <div className="space-y-6 p-5 sm:p-8">
+        <div className="mx-auto w-full max-w-[1600px] space-y-6 p-4 sm:p-6 lg:p-8">
           <div>
             <p className="text-sm text-muted-foreground">
               Overview / Deliveries
             </p>
-            <h1 className="mt-2 text-2xl font-semibold tracking-tight">
+            <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
               Deliveries
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -343,10 +346,10 @@ export function DeliveriesPage() {
                 </div>
               ) : (
                 <>
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto rounded-xl border border-border/50 bg-background/25">
                     <table className="w-full text-left text-sm">
                       <thead>
-                        <tr className="border-b text-xs text-muted-foreground">
+                        <tr className="border-b border-border/50 bg-muted/35 text-[11px] tracking-wide text-muted-foreground">
                           <th className="px-3 py-3 font-medium">Delivery</th>
                           <th className="px-3 py-3 font-medium">Event</th>
                           <th className="px-3 py-3 font-medium">Endpoint</th>
@@ -371,7 +374,7 @@ export function DeliveriesPage() {
                                 retryMutation.reset();
                               }
                             }}
-                            className="cursor-pointer border-b transition-colors hover:bg-muted/50 focus-visible:bg-muted/50"
+                            className="cursor-pointer border-b border-border/40 transition-colors hover:bg-primary/[0.035] focus-visible:bg-primary/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/40"
                           >
                             <td className="px-3 py-4 font-medium">
                               #{item.id}

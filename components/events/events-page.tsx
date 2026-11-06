@@ -1,6 +1,6 @@
 "use client";
 
-import { DashboardNavigation } from "@/components/dashboard/dashboard-navigation";
+import { DashboardNavigation, MobileDashboardDrawer } from "@/components/dashboard/dashboard-navigation";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 
 import { useMemo, useState } from "react";
@@ -45,10 +45,10 @@ import {
 const PAGE_SIZE = 10;
 
 const statusStyles: Record<string, string> = {
-  delivered: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  failed: "border-red-200 bg-red-50 text-red-700",
-  queued: "border-blue-200 bg-blue-50 text-blue-700",
-  processing: "border-amber-200 bg-amber-50 text-amber-700",
+  delivered: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300",
+  failed: "border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300",
+  queued: "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/40 dark:text-blue-300",
+  processing: "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-300",
 };
 
 function formatTimestamp(value: string) {
@@ -192,7 +192,7 @@ export function EventsPage() {
 
   return (
     <div className="min-h-screen bg-muted/30">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r bg-background lg:flex">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-border/60 bg-background/75 backdrop-blur-xl lg:flex">
         <div className="flex h-16 items-center gap-3 px-6">
           <div className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground">
             <Webhook className="size-5" />
@@ -215,7 +215,8 @@ export function EventsPage() {
       </aside>
 
       <main className="min-h-screen lg:pl-64">
-        <header className="flex h-16 items-center justify-between border-b bg-background px-5 sm:px-8">
+        <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-border/60 bg-background/70 px-4 shadow-sm backdrop-blur-xl supports-[backdrop-filter]:bg-background/55 sm:px-6 lg:px-8">
+          <MobileDashboardDrawer />
           <div>
             <p className="text-sm font-medium">HookRelay</p>
             <p className="text-xs text-muted-foreground">Events</p>
@@ -223,9 +224,9 @@ export function EventsPage() {
           <ThemeToggle />
         </header>
 
-        <div className="space-y-6 p-5 sm:p-8">
+        <div className="mx-auto w-full max-w-[1600px] space-y-6 p-4 sm:p-6 lg:p-8">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Events</h1>
+            <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Events</h1>
             <p className="mt-1 text-sm text-muted-foreground">
               Inspect received events and follow their webhook deliveries.
             </p>
@@ -331,7 +332,7 @@ export function EventsPage() {
                       key={event.id}
                       type="button"
                       onClick={() => setSelectedEventId(event.id)}
-                      className="w-full rounded-lg border bg-background p-4 text-left transition-colors hover:border-primary/50 hover:bg-muted/30"
+                      className="w-full rounded-xl border border-border/60 bg-background/45 p-4 text-left shadow-sm transition-[border-color,background-color,box-shadow] duration-200 hover:border-primary/35 hover:bg-primary/[0.025] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                     >
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div className="min-w-0">

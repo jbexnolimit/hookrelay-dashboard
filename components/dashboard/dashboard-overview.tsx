@@ -28,7 +28,7 @@ import type {
   DeliveryAttempt,
 } from "@/lib/api";
 
-import { DashboardNavigation } from "@/components/dashboard/dashboard-navigation";
+import { DashboardNavigation, MobileDashboardDrawer } from "@/components/dashboard/dashboard-navigation";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -69,10 +69,10 @@ interface Metric {
 }
 
 const statusStyles: Record<string, string> = {
-  delivered: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  failed: "border-red-200 bg-red-50 text-red-700",
-  queued: "border-blue-200 bg-blue-50 text-blue-700",
-  processing: "border-amber-200 bg-amber-50 text-amber-700",
+  delivered: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300",
+  failed: "border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300",
+  queued: "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/40 dark:text-blue-300",
+  processing: "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-300",
 };
 
 function formatStatus(status: string): string {
@@ -255,7 +255,7 @@ export function DashboardOverview() {
 
   return (
     <div className="min-h-screen bg-muted/30">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r bg-background lg:flex">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-border/60 bg-background/75 backdrop-blur-xl lg:flex">
         <div className="flex h-16 items-center gap-3 px-6">
           <div className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground">
             <Webhook className="size-5" />
@@ -303,7 +303,8 @@ export function DashboardOverview() {
       </aside>
 
       <div className="lg:pl-64">
-        <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b bg-background/95 px-4 backdrop-blur sm:px-6 lg:px-8">
+        <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-border/60 bg-background/70 px-4 shadow-sm backdrop-blur-xl supports-[backdrop-filter]:bg-background/55 sm:px-6 lg:px-8">
+          <MobileDashboardDrawer />
           <div className="flex items-center gap-3">
             <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground lg:hidden">
               <Webhook className="size-4" />
@@ -373,13 +374,15 @@ export function DashboardOverview() {
               return (
                 <Card key={metric.label} className="gap-3">
                   <CardHeader className="flex flex-row items-center justify-between gap-2 pb-0">
-                    <CardDescription>{metric.label}</CardDescription>
-                    <div className="flex size-9 items-center justify-center rounded-lg bg-muted">
+                    <CardDescription className="text-xs font-medium tracking-wide">
+                      {metric.label}
+                    </CardDescription>
+                    <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-border/50 bg-muted/60 shadow-sm">
                       <Icon className="size-4 text-muted-foreground" />
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-semibold tracking-tight">
+                    <div className="text-2xl font-semibold tracking-tight tabular-nums">
                       {analyticsQuery.isPending ? (
                         <Skeleton className="h-7 w-20" />
                       ) : analyticsError ? (
@@ -388,7 +391,7 @@ export function DashboardOverview() {
                         metric.value
                       )}
                     </div>
-                    <p className="mt-1 text-xs text-muted-foreground">
+                    <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
                       {metric.description}
                     </p>
                   </CardContent>
@@ -443,16 +446,18 @@ export function DashboardOverview() {
                         margin={{ top: 8, right: 8, left: -16, bottom: 0 }}
                       >
                         <CartesianGrid
-                          strokeDasharray="3 3"
+                          stroke="var(--border)"
+                          strokeOpacity={0.55}
+                          strokeDasharray="3 5"
                           vertical={false}
-                          className="stroke-border"
                         />
 
                         <XAxis
                           dataKey="label"
                           tickLine={false}
                           axisLine={false}
-                          tick={{ fontSize: 12 }}
+                          tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
+                          tickMargin={10}
                           minTickGap={12}
                         />
 
@@ -460,7 +465,8 @@ export function DashboardOverview() {
                           allowDecimals={false}
                           tickLine={false}
                           axisLine={false}
-                          tick={{ fontSize: 12 }}
+                          tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
+                          tickMargin={8}
                         />
 
                         <Tooltip
@@ -472,14 +478,23 @@ export function DashboardOverview() {
                           }}
                           cursor={{ fill: "currentColor", opacity: 0.05 }}
                           contentStyle={{
-                            borderRadius: 8,
+                            borderRadius: 12,
                             border: "1px solid var(--border)",
-                            backgroundColor: "var(--background)",
+                            backgroundColor: "var(--popover)",
+                            color: "var(--popover-foreground)",
+                            boxShadow: "0 12px 32px -12px rgba(0, 0, 0, 0.3)",
+                            padding: "10px 12px",
                             fontSize: 12,
                           }}
+                          itemStyle={{ color: "var(--popover-foreground)" }}
                         />
 
-                        <Legend wrapperStyle={{ fontSize: 12 }} />
+                        <Legend
+                          wrapperStyle={{
+                            fontSize: 11,
+                            paddingTop: 12,
+                          }}
+                        />
 
                         <Bar
                           dataKey="delivered"

@@ -18,7 +18,7 @@ import {
   XCircle,
 } from "lucide-react";
 
-import { DashboardNavigation } from "@/components/dashboard/dashboard-navigation";
+import { DashboardNavigation, MobileDashboardDrawer } from "@/components/dashboard/dashboard-navigation";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -69,6 +69,12 @@ const emptyDraft: EndpointDraft = {
   eventTypes: "",
   isActive: true,
 };
+
+function normalizeEventTypes(value: string | string[]): string[] {
+  const values = typeof value === "string" ? value.split(",") : value;
+  return [...new Set(values.map((type) => type.trim()).filter(Boolean))]
+    .sort();
+}
 
 function getErrorMessage(error: unknown): string {
   if (axios.isAxiosError(error)) {
@@ -121,8 +127,8 @@ function StatusBadge({ active }: { active: boolean }) {
       variant="outline"
       className={
         active
-          ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-          : "border-zinc-200 bg-zinc-100 text-zinc-600"
+          ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300"
+          : "border-slate-200/80 bg-slate-100/80 text-slate-600 dark:border-slate-700/70 dark:bg-slate-800/60 dark:text-slate-300"
       }
     >
       <span className="mr-1.5 size-1.5 rounded-full bg-current" />
@@ -246,9 +252,17 @@ export function EndpointsPage() {
 
   const isSaving = createMutation.isPending || updateMutation.isPending;
 
+  const hasEndpointChanges = editingEndpoint
+    ? draft.name.trim() !== editingEndpoint.name ||
+      draft.slug.trim() !== editingEndpoint.slug ||
+      draft.url.trim() !== editingEndpoint.url ||
+      draft.isActive !== editingEndpoint.is_active ||
+      JSON.stringify(normalizeEventTypes(draft.eventTypes)) !==
+        JSON.stringify(normalizeEventTypes(editingEndpoint.event_types))
+    : false;
+
   function openCreateForm() {
     setEditingEndpoint(null);
-    setDraft(emptyDraft);
     setFormError("");
     setFormOpen(true);
   }
@@ -337,7 +351,7 @@ export function EndpointsPage() {
 
   return (
     <div className="min-h-screen bg-muted/30">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r bg-background lg:flex">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-border/60 bg-background/75 backdrop-blur-xl lg:flex">
         <div className="flex h-16 items-center gap-3 px-6">
           <div className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground">
             <Webhook className="size-5" />
@@ -362,18 +376,19 @@ export function EndpointsPage() {
       </aside>
 
       <main className="min-h-screen lg:pl-64">
-        <header className="flex h-16 items-center justify-between border-b bg-background px-5 sm:px-8">
+        <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-border/60 bg-background/70 px-4 shadow-sm backdrop-blur-xl supports-[backdrop-filter]:bg-background/55 sm:px-6 lg:px-8">
+          <MobileDashboardDrawer />
           <div>
-            <p className="text-sm font-medium">HookRelay</p>
+            <p className="text-sm font-semibold tracking-tight">HookRelay</p>
             <p className="text-xs text-muted-foreground">Endpoints</p>
           </div>
           <ThemeToggle />
         </header>
 
-        <div className="space-y-6 p-5 sm:p-8">
+        <div className="mx-auto w-full max-w-[1600px] space-y-6 p-4 sm:p-6 lg:p-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h1 className="text-2xl font-semibold tracking-tight">
+              <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
                 Webhook endpoints
               </h1>
               <p className="mt-1 text-sm text-muted-foreground">
@@ -666,16 +681,12 @@ export function EndpointsPage() {
         open={formOpen}
         onOpenChange={(open) => {
           setFormOpen(open);
-          if (!open) {
-            setFormError("");
-            setEditingEndpoint(null);
-            setDraft(emptyDraft);
-          }
+          if (!open) setFormError("");
         }}
       >
-        <SheetContent className="w-full gap-0 overflow-y-auto p-0 sm:max-w-xl">
-          <SheetHeader className="border-b pr-12">
-            <SheetTitle>
+        <SheetContent className="w-full gap-0 overflow-y-auto p-0 shadow-xl sm:max-w-xl">
+          <SheetHeader className="border-b bg-muted/20 px-6 py-5 pr-12">
+            <SheetTitle className="text-lg font-semibold tracking-tight">
               {editingEndpoint ? "Edit endpoint" : "Create endpoint"}
             </SheetTitle>
             <SheetDescription>
@@ -684,13 +695,14 @@ export function EndpointsPage() {
           </SheetHeader>
 
           <form onSubmit={submitForm} className="flex flex-1 flex-col">
-            <div className="space-y-5 p-5">
+            <div className="space-y-6 p-6">
               <div className="space-y-2">
-                <label htmlFor="endpoint-name" className="text-sm font-medium">
+                <label htmlFor="endpoint-name" className="text-sm font-semibold tracking-tight">
                   Name
                 </label>
                 <Input
                   id="endpoint-name"
+                  className="h-10 transition-shadow focus-visible:ring-2"
                   value={draft.name}
                   onChange={(event) =>
                     setDraft({ ...draft, name: event.target.value })
@@ -702,11 +714,12 @@ export function EndpointsPage() {
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="endpoint-slug" className="text-sm font-medium">
+                <label htmlFor="endpoint-slug" className="text-sm font-semibold tracking-tight">
                   Slug
                 </label>
                 <Input
                   id="endpoint-slug"
+                  className="h-10 transition-shadow focus-visible:ring-2"
                   value={draft.slug}
                   onChange={(event) =>
                     setDraft({ ...draft, slug: event.target.value })
@@ -721,11 +734,12 @@ export function EndpointsPage() {
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="endpoint-url" className="text-sm font-medium">
+                <label htmlFor="endpoint-url" className="text-sm font-semibold tracking-tight">
                   Destination URL
                 </label>
                 <Input
                   id="endpoint-url"
+                  className="h-10 transition-shadow focus-visible:ring-2"
                   type="url"
                   value={draft.url}
                   onChange={(event) =>
@@ -743,7 +757,7 @@ export function EndpointsPage() {
               <div className="space-y-2">
                 <label
                   htmlFor="endpoint-events"
-                  className="text-sm font-medium"
+                  className="text-sm font-semibold tracking-tight"
                 >
                   Event types
                 </label>
@@ -755,7 +769,7 @@ export function EndpointsPage() {
                   }
                   placeholder="order.created, order.updated, payment.completed"
                   rows={4}
-                  className="w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                  className="min-h-24 w-full resize-y rounded-lg border border-input bg-transparent px-3 py-2.5 text-sm leading-6 outline-none transition-shadow placeholder:text-muted-foreground/70 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50"
                 />
                 <p className="text-xs text-muted-foreground">
                   Separate event types with commas. Leave empty to accept no specific event types.
@@ -797,11 +811,21 @@ export function EndpointsPage() {
                 type="button"
                 variant="outline"
                 disabled={isSaving}
-                onClick={() => setFormOpen(false)}
+                onClick={() => {
+                  setFormOpen(false);
+                  setFormError("");
+                  setEditingEndpoint(null);
+                  setDraft(emptyDraft);
+                }}
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSaving}>
+              <Button
+                type="submit"
+                disabled={
+                  isSaving || (Boolean(editingEndpoint) && !hasEndpointChanges)
+                }
+              >
                 {isSaving && (
                   <LoaderCircle className="size-4 animate-spin" />
                 )}
