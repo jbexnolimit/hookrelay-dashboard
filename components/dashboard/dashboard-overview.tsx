@@ -157,7 +157,7 @@ export function DashboardOverview() {
 
   const activityQuery = useQuery({
     queryKey: ["delivery-activity"],
-    queryFn: getDeliveryActivity,
+    queryFn: () => getDeliveryActivity(),
   });
 
   const activityDays: DeliveryActivityDay[] =

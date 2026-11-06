@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Activity,
@@ -47,6 +47,7 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const numberFormat = new Intl.NumberFormat("en-PH");
 
@@ -107,15 +108,18 @@ function LoadingCard() {
   );
 }
 
+type ActivityRange = 7 | 14 | 30;
+
 export function AnalyticsPage() {
+  const [activityRange, setActivityRange] = useState<ActivityRange>(7);
   const summaryQuery = useQuery({
     queryKey: ["analytics-summary"],
     queryFn: getAnalyticsSummary,
   });
 
   const activityQuery = useQuery({
-    queryKey: ["delivery-activity"],
-    queryFn: getDeliveryActivity,
+    queryKey: ["delivery-activity", activityRange],
+    queryFn: () => getDeliveryActivity(activityRange),
   });
 
   const deliveriesQuery = useQuery({
@@ -333,12 +337,31 @@ export function AnalyticsPage() {
 
           <section className="grid gap-6 xl:grid-cols-3">
             <Card className="xl:col-span-2">
-              <CardHeader>
-                <CardTitle>Delivery activity</CardTitle>
-                <CardDescription>
-                  Daily delivery counts by current status over the last seven days.
-                  This chart groups deliveries by creation date, not status-change date.
-                </CardDescription>
+              <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <CardTitle>Delivery activity</CardTitle>
+                  <CardDescription className="mt-1">
+                    Daily delivery counts by current status over the last {activityRange} days.
+                    This chart groups deliveries by creation date, not status-change date.
+                  </CardDescription>
+                </div>
+                <Select
+                  value={String(activityRange)}
+                  onValueChange={(value) => {
+                    if (value === "7" || value === "14" || value === "30") {
+                      setActivityRange(Number(value) as ActivityRange);
+                    }
+                  }}
+                >
+                  <SelectTrigger aria-label="Delivery activity date range" className="w-[140px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="7">Last 7 days</SelectItem>
+                    <SelectItem value="14">Last 14 days</SelectItem>
+                    <SelectItem value="30">Last 30 days</SelectItem>
+                  </SelectContent>
+                </Select>
               </CardHeader>
               <CardContent>
                 {activityQuery.isPending ? (
@@ -347,7 +370,7 @@ export function AnalyticsPage() {
                     role="status"
                     aria-label="Loading delivery activity"
                   >
-                    {Array.from({ length: 7 }, (_, index) => (
+                    {Array.from({ length: activityRange }, (_, index) => (
                       <Skeleton
                         key={index}
                         className="flex-1"
