@@ -17,3 +17,17 @@ export {
 
 export type { HookEvent } from "./api/types/event";
 export { getEvents, getEvent, getEventDeliveries } from "./api/events";
+
+export type {
+  WebhookEndpoint,
+  WebhookEndpointFilters,
+  WebhookEndpointPayload,
+} from "./api/types/endpoint";
+
+export {
+  getEndpoints,
+  getEndpoint,
+  createEndpoint,
+  updateEndpoint,
+  deleteEndpoint,
+} from "./api/endpoints";
