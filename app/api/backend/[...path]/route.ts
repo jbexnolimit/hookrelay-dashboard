@@ -15,13 +15,32 @@ async function proxyRequest(
 
   const { path } = await context.params;
   const pathname = path.join("/");
-  const search = request.nextUrl.search;
-  const targetUrl = `${BACKEND_URL}/${pathname}/${search}`;
+
+  const baseUrl = new URL(`${BACKEND_URL.replace(/\/+$/, "")}/`);
+  const targetUrl = new URL(`${pathname}/`, baseUrl);
+  targetUrl.search = request.nextUrl.search;
 
   const headers = new Headers(request.headers);
-  headers.delete("host");
+
+  for (const name of [
+    "host",
+    "connection",
+    "keep-alive",
+    "proxy-authenticate",
+    "proxy-authorization",
+    "te",
+    "trailer",
+    "transfer-encoding",
+    "upgrade",
+    "content-length",
+    "accept-encoding",
+  ]) {
+    headers.delete(name);
+  }
 
   try {
+    console.log("[HookRelay proxy] Requesting:", targetUrl.toString());
+
     const response = await fetch(targetUrl, {
       method: request.method,
       headers,
@@ -40,9 +59,29 @@ async function proxyRequest(
           response.headers.get("content-type") ?? "application/json",
       },
     });
-  } catch {
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    const cause =
+      error instanceof Error && error.cause instanceof Error
+        ? {
+            name: error.cause.name,
+            message: error.cause.message,
+            code: (error.cause as NodeJS.ErrnoException).code,
+          }
+        : null;
+
+    console.error("[HookRelay proxy] Backend request failed:", {
+      target: targetUrl.toString(),
+      detail,
+      cause,
+    });
+
     return NextResponse.json(
-      { error: "Unable to reach the HookRelay backend" },
+      {
+        error: "Unable to reach the HookRelay backend",
+        detail,
+        cause,
+      },
       { status: 502 },
     );
   }
