@@ -596,7 +596,7 @@ export function DeliveriesPage() {
                       {delivery.attempt_count} / {delivery.max_attempts}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Automatic retry limit
+                      Maximum delivery attempts
                     </p>
                   </div>
                   <div>
