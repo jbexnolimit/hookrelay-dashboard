@@ -54,6 +54,39 @@ function formatTimestamp(value: string | null) {
   }).format(date);
 }
 
+function formatHttpStatus(status: number | null) {
+  if (status == null) return "No HTTP response";
+
+  const descriptions: Record<number, string> = {
+    200: "OK",
+    201: "Created",
+    202: "Accepted",
+    204: "No Content",
+    301: "Moved Permanently",
+    302: "Found",
+    304: "Not Modified",
+    400: "Bad Request",
+    401: "Unauthorized",
+    403: "Forbidden",
+    404: "Not Found",
+    408: "Request Timeout",
+    409: "Conflict",
+    410: "Gone",
+    413: "Content Too Large",
+    415: "Unsupported Media Type",
+    422: "Unprocessable Content",
+    429: "Too Many Requests",
+    500: "Internal Server Error",
+    501: "Not Implemented",
+    502: "Bad Gateway",
+    503: "Service Unavailable",
+    504: "Gateway Timeout",
+  }
+
+  const description = descriptions[status]
+  return description ? `${status} ${description}` : `${status} HTTP status`;
+}
+
 function StatusBadge({ status }: { status: string }) {
   const normalized = status.toLowerCase();
 
@@ -77,19 +110,24 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function AttemptResultBadge({ result }: { result: string }) {
-  const success = result.toLowerCase() === "success";
+  const normalized = result.toLowerCase();
+  const success = normalized === "success";
+  const failure = normalized === "failure";
+  const label = success
+    ? "Succeeded"
+    : failure
+      ? "Failed"
+      : result.charAt(0).toUpperCase() + result.slice(1);
+  const styles = success
+    ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300"
+    : failure
+      ? "border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300"
+      : "";
 
   return (
-    <Badge
-      variant="outline"
-      className={
-        success
-          ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300"
-          : "border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300"
-      }
-    >
+    <Badge variant="outline" className={styles}>
       <span className="mr-1.5 size-1.5 rounded-full bg-current" />
-      {result.charAt(0).toUpperCase() + result.slice(1)}
+      {label}
     </Badge>
   );
 }
@@ -701,7 +739,7 @@ export function DeliveriesPage() {
                                 HTTP status
                               </p>
                               <p className="mt-1">
-                                {attempt.http_status_code ?? "—"}
+                                {formatHttpStatus(attempt.http_status_code)}
                               </p>
                             </div>
                             <div>
