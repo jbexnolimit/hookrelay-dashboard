@@ -162,13 +162,33 @@ export function EndpointsPage() {
   const deliveries = deliveriesQuery.data ?? EMPTY_DELIVERIES;
 
   const deliveryCounts = useMemo(() => {
-    const counts = new Map<number, number>();
+    const counts = new Map<
+      number,
+      { total: number; delivered: number; failed: number; inProgress: number }
+    >();
 
     for (const delivery of deliveries) {
-      counts.set(
-        delivery.endpoint,
-        (counts.get(delivery.endpoint) ?? 0) + 1,
-      );
+      const count = counts.get(delivery.endpoint) ?? {
+        total: 0,
+        delivered: 0,
+        failed: 0,
+        inProgress: 0,
+      };
+
+      count.total += 1;
+
+      if (delivery.status === "delivered") {
+        count.delivered += 1;
+      } else if (delivery.status === "failed") {
+        count.failed += 1;
+      } else if (
+        delivery.status === "queued" ||
+        delivery.status === "processing"
+      ) {
+        count.inProgress += 1;
+      }
+
+      counts.set(delivery.endpoint, count);
     }
 
     return counts;
@@ -331,7 +351,7 @@ export function EndpointsPage() {
   }
 
   function handleDelete(endpoint: WebhookEndpoint) {
-    const count = deliveryCounts.get(endpoint.id) ?? 0;
+    const count = deliveryCounts.get(endpoint.id)?.total ?? 0;
 
     if (!deliveriesQuery.isSuccess) return;
 
@@ -527,7 +547,13 @@ export function EndpointsPage() {
                 )}
 
               {filteredEndpoints.map((endpoint) => {
-                const deliveryCount = deliveryCounts.get(endpoint.id) ?? 0;
+                const deliveryStats = deliveryCounts.get(endpoint.id) ?? {
+                  total: 0,
+                  delivered: 0,
+                  failed: 0,
+                  inProgress: 0,
+                };
+                const deliveryCount = deliveryStats.total;
                 const deleting = deleteMutation.isPending &&
                   deleteMutation.variables === endpoint.id;
                 const changingStatus =
@@ -596,6 +622,23 @@ export function EndpointsPage() {
                           {deliveryCount} delivery record
                           {deliveryCount === 1 ? "" : "s"}
                         </p>
+
+                        {deliveriesQuery.isSuccess && (
+                          <div
+                            className="flex flex-wrap gap-x-3 gap-y-1 text-xs"
+                            aria-label="Delivery health"
+                          >
+                            <span className="text-emerald-700 dark:text-emerald-400">
+                              Delivered: {deliveryStats.delivered}
+                            </span>
+                            <span className="text-destructive">
+                              Failed: {deliveryStats.failed}
+                            </span>
+                            <span className="text-muted-foreground">
+                              In progress: {deliveryStats.inProgress}
+                            </span>
+                          </div>
+                        )}
                       </div>
 
                       <div className="flex flex-wrap items-center gap-2 xl:justify-end">
