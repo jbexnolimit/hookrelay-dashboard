@@ -307,6 +307,7 @@ export function DeliveriesPage() {
                   <option value="all">All statuses</option>
                   <option value="delivered">Delivered</option>
                   <option value="queued">Queued</option>
+                  <option value="pending">Pending</option>
                   <option value="processing">Processing</option>
                   <option value="failed">Failed</option>
                 </select>

@@ -154,6 +154,20 @@ export function EventsPage() {
   const [idempotencyKey, setIdempotencyKey] = useState("");
   const [formError, setFormError] = useState("");
 
+  const isPayloadValid = useMemo(() => {
+    try {
+      const parsedPayload: unknown = JSON.parse(payloadText);
+
+      return (
+        parsedPayload !== null &&
+        typeof parsedPayload === "object" &&
+        !Array.isArray(parsedPayload)
+      );
+    } catch {
+      return false;
+    }
+  }, [payloadText]);
+
   const eventsQuery = useQuery({
     queryKey: ["events"],
     queryFn: getEvents,
@@ -190,6 +204,9 @@ export function EventsPage() {
     });
 
     setFormError("");
+    setEventType("");
+    setPayloadText('{}');
+    setIdempotencyKey("");
     setSearch("");
     setCurrentPage(1);
     setSelectedEventId(response.event.id);
@@ -453,7 +470,11 @@ export function EventsPage() {
             <div className="flex justify-end">
               <Button
                 type="submit"
-                disabled={createEventMutation.isPending}
+                disabled={
+                  createEventMutation.isPending ||
+                  !eventType.trim() ||
+                  !isPayloadValid
+                }
               >
                 <Send className="size-4" />
                 {createEventMutation.isPending
