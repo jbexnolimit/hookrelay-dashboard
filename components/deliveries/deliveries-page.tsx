@@ -617,13 +617,34 @@ export function DeliveriesPage() {
                   </div>
                 </div>
 
+                {delivery.status.toLowerCase() === "queued" && (
+                  <div className="rounded-lg border px-4 py-3 text-sm">
+                    <p className="font-medium">Waiting for delivery</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {delivery.next_retry_at
+                        ? `Next automatic retry scheduled for ${formatTimestamp(delivery.next_retry_at)}.`
+                        : "This delivery is queued and waiting to be processed."}
+                    </p>
+                  </div>
+                )}
+
+                {delivery.status.toLowerCase() === "processing" && (
+                  <div className="rounded-lg border px-4 py-3 text-sm">
+                    <p className="font-medium">Delivery in progress</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      An attempt is currently being processed.
+                    </p>
+                  </div>
+                )}
+
                 {delivery.status.toLowerCase() === "failed" && (
                   <div className="space-y-3 rounded-lg border p-4">
                     <div>
                       <h4 className="text-sm font-semibold">Manual retry</h4>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        Queue another attempt for this failed delivery. Manual
-                        retries may exceed the automatic retry limit.
+                        Automatic retries have stopped. Queue another attempt
+                        manually; manual retries may exceed the automatic retry
+                        limit.
                       </p>
                     </div>
 
