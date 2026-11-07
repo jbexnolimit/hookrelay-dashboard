@@ -6,6 +6,19 @@ export type {
 } from "./api/types/activity";
 export type { DeliveryAttempt } from "./api/types/delivery-attempt";
 
+export type { HookEvent } from "./api/types/event";
+
+export type {
+  WebhookEndpoint,
+  WebhookEndpointFilters,
+  WebhookEndpointPayload,
+} from "./api/types/endpoint";
+
+export type {
+  CreateEventPayload,
+  CreateEventResponse,
+} from "./api/events";
+
 export { getAnalyticsSummary } from "./api/analytics";
 export { getDeliveries } from "./api/deliveries";
 export { getDeliveryActivity } from "./api/activity";
@@ -15,14 +28,7 @@ export {
   retryDelivery,
 } from "./api/delivery-details";
 
-export type { HookEvent } from "./api/types/event";
-export { getEvents, getEvent, getEventDeliveries } from "./api/events";
-
-export type {
-  WebhookEndpoint,
-  WebhookEndpointFilters,
-  WebhookEndpointPayload,
-} from "./api/types/endpoint";
+export { getEvents, getEvent, getEventDeliveries, createEvent } from "./api/events";
 
 export {
   getEndpoints,

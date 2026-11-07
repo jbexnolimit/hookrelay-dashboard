@@ -1,8 +1,6 @@
 "use client";
-
 import { DashboardNavigation, MobileDashboardDrawer } from "@/components/dashboard/dashboard-navigation";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
-
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
@@ -11,17 +9,24 @@ import {
   Clock3,
   Radio,
   Search,
+  Send,
   Webhook,
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
-
 import {
+  createEvent,
   getEvents,
   getEvent,
   getEventDeliveries,
 } from "@/lib/api";
-import type { HookEvent, Delivery } from "@/lib/api";
+
+
+import type {
+  HookEvent,
+  Delivery,
+  CreateEventPayload,
+} from "@/lib/api";
 
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -42,8 +47,10 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 
-const PAGE_SIZE = 10;
+import { Button } from "@/components/ui/button";
 
+
+const PAGE_SIZE = 10;
 const statusStyles: Record<string, string> = {
   delivered: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300",
   failed: "border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300",
@@ -140,6 +147,13 @@ export function EventsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
 
+  const queryClient = useQueryClient();
+
+  const [eventType, setEventType] = useState("");
+  const [payloadText, setPayloadText] = useState('{\n  \n}');
+  const [idempotencyKey, setIdempotencyKey] = useState("");
+  const [formError, setFormError] = useState("");
+
   const eventsQuery = useQuery({
     queryKey: ["events"],
     queryFn: getEvents,
@@ -161,6 +175,33 @@ export function EventsPage() {
     () => eventsQuery.data ?? [],
     [eventsQuery.data],
   );
+
+  const createEventMutation = useMutation({
+  mutationFn: (payload: CreateEventPayload) => createEvent(payload),
+  onSuccess: async (response) => {
+    await queryClient.invalidateQueries({ queryKey: ["events"] });
+
+    await queryClient.invalidateQueries({
+      queryKey: ["event", response.event.id],
+    });
+
+    await queryClient.invalidateQueries({
+      queryKey: ["event-deliveries", response.event.id],
+    });
+
+    setFormError("");
+    setSearch("");
+    setCurrentPage(1);
+    setSelectedEventId(response.event.id);
+  },
+  onError: (error: unknown) => {
+    setFormError(
+      error instanceof Error
+        ? error.message
+        : "Unable to publish the event. Please try again.",
+    );
+  },
+});
 
   const filteredEvents = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -269,6 +310,160 @@ export function EventsPage() {
               </CardContent>
             </Card>
           </div>
+
+        <Card>
+        <CardHeader>
+          <CardTitle>Publish an event</CardTitle>
+          <CardDescription>
+            Submit a JSON event to HookRelay. Active endpoints subscribed
+            to this event type can receive deliveries.
+          </CardDescription>
+        </CardHeader>
+
+        <CardContent>
+          <form
+            className="space-y-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              createEventMutation.reset();
+              setFormError("");
+
+              const normalizedEventType = eventType.trim();
+
+              if (!normalizedEventType) {
+                setFormError("Enter an event type.");
+                return;
+              }
+
+              let parsedPayload: unknown;
+
+              try {
+                parsedPayload = JSON.parse(payloadText);
+              } catch {
+                setFormError("Payload must contain valid JSON.");
+                return;
+              }
+
+              if (
+                parsedPayload === null ||
+                typeof parsedPayload !== "object" ||
+                Array.isArray(parsedPayload)
+              ) {
+                setFormError("Payload must be a JSON object.");
+                return;
+              }
+
+              const request: CreateEventPayload = {
+                event_type: normalizedEventType,
+                payload: parsedPayload as Record<string, unknown>,
+              };
+
+              const normalizedKey = idempotencyKey.trim();
+
+              if (normalizedKey) {
+                request.idempotency_key = normalizedKey;
+              }
+
+              createEventMutation.mutate(request);
+            }}
+          >
+            <div className="space-y-2">
+              <label htmlFor="event-type" className="text-sm font-medium">
+                Event type
+              </label>
+              <Input
+                id="event-type"
+                value={eventType}
+                onChange={(event) => setEventType(event.target.value)}
+                placeholder="e.g. order.created"
+                required
+                disabled={createEventMutation.isPending}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="event-payload" className="text-sm font-medium">
+                JSON payload
+              </label>
+              <textarea
+                id="event-payload"
+                value={payloadText}
+                onChange={(event) => setPayloadText(event.target.value)}
+                required
+                disabled={createEventMutation.isPending}
+                spellCheck={false}
+                className="min-h-40 w-full rounded-xl border border-border/70 bg-background/65 px-3 py-3 font-mono text-sm shadow-sm outline-none focus-visible:border-primary/50 focus-visible:ring-4 focus-visible:ring-primary/10 disabled:opacity-50"
+                aria-describedby="event-payload-help"
+              />
+              <p
+                id="event-payload-help"
+                className="text-xs text-muted-foreground"
+              >
+                Enter a JSON object. For example: {" "}
+                <code>{'{"order_id": "ORD-1001"}'}</code>
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="event-idempotency-key" className="text-sm font-medium">
+                Idempotency key (optional)
+              </label>
+              <Input
+                id="event-idempotency-key"
+                value={idempotencyKey}
+                onChange={(event) => setIdempotencyKey(event.target.value)}
+                placeholder="e.g. order-created-ORD-1001"
+                disabled={createEventMutation.isPending}
+              />
+              <p className="text-xs text-muted-foreground">
+                Reuse the same key to safely retry a submission without
+                creating another event.
+              </p>
+            </div>
+
+            {formError && (
+              <p role="alert" className="text-sm text-red-600">
+                {formError}
+              </p>
+            )}
+
+            {createEventMutation.isSuccess && (
+              <div
+                role="status"
+                className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-300"
+              >
+                <p className="font-medium">
+                  {createEventMutation.data.idempotent_replay
+                    ? "Existing event returned"
+                    : "Event published"}
+                </p>
+                <p className="mt-1">
+                  {createEventMutation.data.message}
+                </p>
+                <p className="mt-1">
+                  Event #{createEventMutation.data.event.id} ·{" "}
+                  {createEventMutation.data.deliveries.length}{" "}
+                  {createEventMutation.data.deliveries.length === 1
+                    ? "delivery"
+                    : "deliveries"} created or associated.
+                </p>
+              </div>
+            )}
+
+            <div className="flex justify-end">
+              <Button
+                type="submit"
+                disabled={createEventMutation.isPending}
+              >
+                <Send className="size-4" />
+                {createEventMutation.isPending
+                  ? "Publishing..."
+                  : "Publish event"}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
 
           <Card>
             <CardHeader>
